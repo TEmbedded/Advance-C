@@ -281,8 +281,410 @@ Một số nhược điểm của việc sử dụng macro trong ngôn ngữ l�
 - Khó đọc và hiểu mã nguồn: Một số macro có tên ngắn gọn nhưng nội dung phức tạp, làm cho mã nguồn trở nên khó đọc và hiểu1.
 - Không hỗ trợ xác thực chính thức: Macro không được kiểm tra tính hợp lệ trước khi biên dịch, do đó không có cơ chế xác thực chính thức. Điều này có thể gây ra lỗi không mong muốn trong chương trình.
 - Tăng độ phức tạp của dữ liệu: Sử dụng quá nhiều macro có thể làm cho mã nguồn trở nên phức tạp và khó quản lý.
+
+
 ---
 
+
 # **LESSION 2: STDARG - ASSERT**
-___
+
+## *I. Stdarg:*
+Cung cấp các phương thức để làm việc với các hàm có số lượng input parameter không cố định. Các hàm như `printf` và `scanf` là ví dụ điển hình.
+
+Cú pháp thư viện: `#include<stdarg.h>`.
+
+- `va_list`: là một kiểu dữ liệu để đại diện cho danh sách các đối số biến đổi.
+
+- `va_start`: Bắt đầu một danh sách đối số biến đổi. Nó cần được gọi trước khi truy cập các đối số biến đổi đầu tiên.
+
+- `va_arg`: Truy cập một đối số trong danh sách. Hàm này nhận một đối số của kiểu được xác định bởi tham số thứ hai.
+
+- `va_end`: Kết thúc việc sử dụng danh sách đối số biến đổi. Nó cần được gọi trước khi kết thúc hàm.
+
+>Ví dụ 1:
+```c
+#include <stdio.h>
+#include <stdarg.h>
+
+int sum(int count, ...) {
+    va_list args;// đây là 1 kiểu dữ liệu ,để lưu 1 địa chỉ 
+    va_start(args, count); //Khởi tạo va_list và đọc giá trị ở sau cout 
+	//trong trường hợp này là 4....
+
+    int result = 0;
+    for (int i = 0; i < count; i++) {
+        result += va_arg(args, int);// ép kiểu dữ liệu 
+    }	
+
+    va_end(args); //thu hồi vùng nhớ của va_list args;
+
+    return result;
+}
+
+int main() {
+    printf("Sum: %d\n", sum(4, 1, 2, 3, 4));// sum:10 , vì chỉ đọc giá trị phía sau cout truyền vào là 4 tham số
+    return 0; 
+```
+>Ví dụ 2:
+```c
+#include <stdio.h>
+#include <stdarg.h>
+
+
+typedef struct Data
+{
+    int x;
+    double y;
+} Data;
+
+void display(int count, ...) {
+
+    va_list args;
+
+    va_start(args, count);
+
+    int result = 0;
+
+    for (int i = 0; i < count; i++)
+    {
+        Data tmp = va_arg(args,Data);
+        printf("Data.x at %d is: %d\n", i,tmp.x);
+        printf("Data.y at %d is: %f\n", i,tmp.y);
+    }
+   
+
+    va_end(args);
+
+
+}
+
+int main() {
+
+    display(3, (Data){2,5.0} , (Data){10,57.0}, (Data){29,36.0});
+    return 0;
+}
+```
+>Ví dụ 3: Bài toán thực tế, làm sao viết 1 hàm chung , để phù hợp với bất kỳ số lượng tham số đầu vào. Cảm biến độ ẩm 2 tham số , nhiệt độ 3 tham số >> cần 1 hàm phù hợp
+```c
+#include <stdio.h>
+#include <stdarg.h>
+
+typedef enum {
+    TEMPERATURE_SENSOR, 
+    PRESSURE_SENSOR // áp suất
+} SensorType;
+
+void processSensorData(SensorType type, ...) {
+    va_list args;
+    va_start(args, type);
+
+    switch (type) {
+        case TEMPERATURE_SENSOR: {// khi có bài toán lựa chọn thì dùng switch..case
+            int numArgs = va_arg(args, int);
+            int sensorId = va_arg(args, int);
+            float temperature = va_arg(args, double); // float được promote thành double
+            printf("Temperature Sensor ID: %d, Reading: %.2f degrees\n", sensorId, temperature);
+            if (numArgs > 2) {
+                // Xử lý thêm tham số nếu có
+                char* additionalInfo = va_arg(args, char*);
+                printf("Additional Info: %s\n", additionalInfo);
+            }
+            break;
+        }
+        case PRESSURE_SENSOR: {
+            int numArgs = va_arg(args, int);
+            int sensorId = va_arg(args, int);
+            int pressure = va_arg(args, int);
+            printf("Pressure Sensor ID: %d, Reading: %d Pa\n", sensorId, pressure);
+            if (numArgs > 2) {
+                // Xử lý thêm tham số nếu có
+                char* unit = va_arg(args, char*);
+                printf("Unit: %s\n", unit);
+            }
+            break;
+        }
+    }
+
+    va_end(args);
+}
+
+int main() {
+    processSensorData(TEMPERATURE_SENSOR, 3, 1, 36.5, "Room Temperature");
+    processSensorData(PRESSURE_SENSOR, 2, 2, 101325);
+    return 0;
+}
+```
+## *II. Assent*
+### Thư viện Assent: `include <assent.h>`
+
+- Cung cấp macro assert. Macro này được sử dụng để kiểm tra một điều kiện:
+
+  - Nếu điều kiện đúng (true), không có gì xảy ra và chương trình tiếp tục thực thi.
+  - Nếu điều kiện sai (false), chương trình dừng lại và thông báo một thông điệp lỗi.
+- Dùng trong debug, dùng #define NDEBUG để tắt debug
+- Tóm lại, assert thường được sử dụng để kiểm tra điều kiện và kết thúc chương trình khi có lỗi.
+>Ví dụ:
+```c
+#include <assert.h>
+#define ASSERT_IN_RANGE(val, min, max) assert((val) >= (min) && (val) <= (max))
+
+void setLevel(int level) {
+    ASSERT_IN_RANGE(level, 1, 31);// Thiết lập cấp độ
+}
+int main(){
+	int x=45;
+	int day =5;
+	ASSERT_IN_RANGE	(day,0,31);// day <31 thì sẽ thực hiện code tiếp theo
+	//sai thì thông báo 
+	printf("day bang %d\n",day);
+
+}
+```
+---
+# *LESSION 3: POINTER*
+## *Pointer*
+ - Là 1 biến không lưu giá trị bình thường, nó lưu địa chỉ.
+ - kiểu dữ liệu con trỏ phải trùng kiểu dữ liệu biến nó trỏ tới.
+ - Thông qua con trỏ có thể thay đổi giá trị tại biến mà nó trỏ tới.
+ - Cách khai báo con trỏ: <kiểu dữ liệu> * <tên biến>
+ > Ví dụ:
+```c
+ int main(){
+	int a =10;
+	int *ptr =&a;//&lấy địa chỉ
+	return 0;
+ }
+```
+ - Kích thước của con trỏ phụ thuộc vào kiến trúc máy tính và trình biên dịch: 
+    - Môi trường Windows 32 bit: 4 bytes
+    - Môi trường Windows 64 bit: 8 bytes
+```c
+int main()
+{
+    int *ptr;
+    printf("Size of pointer: %d bytes\n", sizeof(ptr));    
+    return 0;
+
+}
+```
+### Ví dụ Ứng dụng để truyền tham trị .
+```c
+#include <stdio.h>
+
+// Hàm swap: Đổi giá trị của hai biến sử dụng con trỏ
+void swap(int *a, int *b)
+{
+    int tmp = *a;   // Lưu giá trị của biến a vào biến tạm thời tmp
+    *a = *b;        // Gán giá trị của biến b cho biến a
+    *b = tmp;       // Gán giá trị của biến tạm thời tmp (ban đầu là giá trị của a) cho biến b
+}
+
+int main()
+{
+    int a = 10, b = 20; // Khai báo và khởi tạo hai biến a và b
+
+    swap(&a, &b);       // Gọi hàm swap để đổi giá trị của a và b
+
+    // In ra giá trị của a và b sau khi đã đổi giá trị
+    printf("value a is: %d\n", a);
+    printf("value b is: %d\n", b);
+
+    return 0; // Kết thúc chương trình
+}
+```
+## Con trỏ NULL: 
+*Con trỏ NULL là con trỏ lưu địa chỉ 0x00000000. Tức địa chỉ bộ nhớ 0, có ý nghĩa đặc biệt, cho biết con trỏ không trỏ vào đâu cả.*
+### Ví dụ:
+```
+ int *p2; //con trỏ chưa khởi tạo, vẫn trỏ đến một vùng nhớ nào đó không xác định
+ int *p3 = NULL; //con trỏ null không trỏ đến vùng nhớ nào
+ int *p4 = null; // Lỗi "null" phải viết in hoa
+ ```
+
+## *Con trỏ đến con trỏ(pointer to pointer): *
+Con trỏ này dùng để lưu địa chỉ của một con trỏ khác.
+Con trỏ đến con trỏ cung cấp một cấp bậc trỏ mới, cho phép thay đổi giá trị của con trỏ gốc. Cấp bậc này có thể hữu ích trong nhiều tình huống, đặc biệt là khi bạn làm việc với các hàm cần thay đổi giá trị của con trỏ.
+### Ví dụ:
+```c
+#include <stdio.h>
+
+int main() {
+    int value = 42;
+    int *ptr1 = &value;  // Con trỏ thường trỏ đến một biến
+
+    int **ptr2 = &ptr1;  // Con trỏ đến con trỏ
+
+    /*
+        **ptr2 = &ptr1
+        ptr2 = &ptr1;
+        *ptr2 = ptr1 = &value;
+        **ptr2 = *ptr1 = value
+    */
+
+    printf("address of value: %p\n", &value); //địa chỉ của value
+    printf("value of ptr1: %p\n", ptr1);     //địa chỉ của value
+
+    printf("address of ptr1: %p\n", &ptr1);  //địa chỉ của ptr1
+    printf("value of ptr2: %p\n", ptr2);     //địa chỉ của ptr1|ptr2 = &ptr1;
+
+    printf("dereference ptr2 first time: %p\n", *ptr2); // địa chỉ của value|*ptr2 = ptr1 = &value;
+
+    printf("dereference ptr2 second time: %d\n", **ptr2); // giá trị của value| **ptr2 = *ptr1 = value;
+
+    return 0;
+}
+```
+## *Void Pointer*
+Con trỏ void trong C và C++ là con trỏ có thể trỏ đến các đối tượng thuộc bất kỳ kiểu dữ liệu nào (không cần biết kiểu dữ liệu con trỏ trỏ tới). Con trỏ void được khai báo bằng kiểu `void *ptr`
+### Ví dụ:
+```c
+/* 
+Trong ví dụ này, chúng ta có một con trỏ void ptr được gán địa chỉ của các biến có kiểu dữ liệu khác nhau (int, float và char). 
+** cần ép kiểu thích hợp khi lấy giá trị mà con trỏ trỏ tới
+ */
+#include <stdio.h>
+
+int main() {
+    int num = 10;
+    float pi = 3.14;
+    char letter = 'A';
+
+    // Declaring void pointer
+    void *ptr;
+
+    // Pointing void pointer to different types of data
+    ptr = &num;
+    printf("Value pointed by void pointer (integer): %d\n", *(int*)ptr);
+
+    ptr = &pi;
+    printf("Value pointed by void pointer (float): %.2f\n", *(float*)ptr);
+
+    ptr = &letter;
+    printf("Value pointed by void pointer (character): %c\n", *(char*)ptr);
+
+    return 0;
+}
+```
+
+## *Con trỏ hàm (Pointer to function)*
+*Con trỏ hàm là một biến lưu giữ địa chỉ của một hàm. Có nghĩa nó trỏ đến vùng nhớ chứa mã máy của hàm được định nghĩa*.
+- Có thể sử dụng con trỏ hàm để truy cập và gọi hàm từ một địa chỉ bộ nhớ cụ thể.
+- Cú pháp: kiểu dữ liệu (*tên con trỏ hàm)(kieu du liêu1, kieu du liêu2)
+- kiểu dữ liệu phải trùng với kiểu dữ liệu của hàm trỏ tới.
+Nếu cần truyền tham số thì kiểu dữ liệu 1, 2 phải trùng với hàm truyền vào.
+### Ví dụ minh họa:
+```c
+#include <stdio.h>
+int add(int a, int b) {
+    return a + b;
+}
+int main() {
+    int (*sum)(int, int); // Khai báo con trỏ hàm
+    sum = add;            // Gán địa chỉ của hàm add cho con trỏ sum
+
+    printf("Sum: %d\n", sum(3, 4)); // Gọi hàm thông qua con trỏ hàm
+
+    return 0;
+}
+```
+Ứng dụng : Con trỏ hàm thường được sử dụng trong các tình huống như việc truyền hàm làm đối số cho một hàm khác (callbacks), xử lý sự kiện, hoặc khi cần chọn lựa hàm để gọi dựa trên điều kiện trong thời gian chạy.
+### Ví dụ:
+```c
+#include <stdio.h>
+// Hàm mẫu 1
+void greetEnglish() {
+    printf("Hello!\n");
+}
+
+// Hàm mẫu 2
+void greetFrench() {
+    printf("Bonjour!\n");
+}
+
+int main() {
+    // Khai báo con trỏ hàm
+    void (*ptrToGreet)();
+
+    // Gán địa chỉ của hàm greetEnglish cho con trỏ hàm
+    ptrToGreet = greetEnglish;
+
+    // Gọi hàm thông qua con trỏ hàm
+    (*ptrToGreet)();  // In ra: Hello!
+
+    // Gán địa chỉ của hàm greetFrench cho con trỏ hàm
+    ptrToGreet = greetFrench;
+
+    // Gọi hàm thông qua con trỏ hàm
+    (*ptrToGreet)();  // In ra: Bonjour!
+
+    return 0;
+}
+```
+## *Hàm con trỏ (Function of pointer)*
+ - Hàm con trỏ là một hàm mà tham số của nó là một con trỏ hàm.
+ - Điều này cho phép bạn truyền một hàm cụ thể vào một hàm khác để thực hiện các tác vụ động linh hoạt.
+### Ví dụ:
+ ```c
+ #include <stdio.h>
+// Hàm con trỏ làm tham số cho một hàm khác
+void processNumbers(int (*operation)(int, int), int a, int b) {
+    int result = operation(a, b);
+    printf("Result: %d\n", result);
+}
+
+// Đặt hàm add truyền vào giá trị cho con trỏ hàm
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    int a = 10, b = 5;
+    processNumbers(add, a, b);
+
+    return 0;
+}
+```
+## *Con trỏ hằng- Pointer to Constant*
+- Khai báo:const　<Kiểu dữ liệu>　* <Tên con trỏ>;
+- Không thể thay đổi giá trị tại biến mà nó đang trỏ đến.
+- Ứng dụng:Trong bài toán thao tác với mảng, lý do arr trả về địa chỉ ,là 1 con trỏ , có thể thay đổi giá trị thông qua địa chỉ .
+### Ví dụ:
+```c
+ int *ptr;// con trỏ thường
+ const int *ptr1;//con trỏ hằng
+ x=5;
+ ptr=&x;
+ *ptr=10;
+ printf("x la %d",x);//x =10
+ *ptr1 =10;//lỗi , vì nó làm thay đổi giá trị biến
+```
+## *Hằng con trỏ- Constant Pointer*
+Khai báo: `int *const const_ptr = &value;`
+Đặc điểm:
+- Khi khai báo hằng con trỏ cần khởi tạo giá trị địa chỉ cho nó.
+- Khi hằng con trỏ đã trỏ đến 1 địa chỉ nào rồi,nó không thể trỏ tới bất kỳ 1 địa chỉ nào khác.
+- Có thể thay đổi được giá trị tại địa chỉ đã khởi gán ban đầu.
+### Ví dụ:
+```c
+#include <stdio.h>
+#include <stdlib.h>
+int main() {    
+	int value = 5;    
+	int test = 15;    
+	int *const const_ptr = &value;   
+	printf("value: %d\n", *const_ptr);    
+	*const_ptr = 7   
+	printf("value: %d\n", *const_ptr);   
+	const_ptr = &test; // LỖI vì đã cố định vào value
+	return 0;
+}
+```
+---
+# *LESSION 4: Memory layout*
+
+
+
+
+
+
 
